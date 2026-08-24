@@ -4,47 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>AI Document Scanner</title>
+    <title>AI Document Scanner V3</title>
 
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-    <main class="container">
+<main class="container">
 
-        <h1>AI Document Scanner</h1>
+    <h1>AI Document Scanner</h1>
 
-        <p>Chọn một ảnh để bắt đầu OCR</p>
+    <p>Chọn ảnh rồi kéo để khoanh vùng cần đọc.</p>
 
-        <input
-            type="file"
-            id="imageInput"
-            accept="image/*"
-        >
+    <input
+        type="file"
+        id="imageInput"
+        accept="image/*"
+    >
 
-        <div id="preview"></div>
+    <div id="canvasContainer">
+        <canvas id="imageCanvas"></canvas>
+    </div>
 
-        <div id="info"></div>
+    <button id="ocrButton" disabled>
+        🔍 Đọc vùng đã chọn
+    </button>
 
-        <button id="ocrButton" disabled>
-            🔍 Đọc chữ trong ảnh
-        </button>
+    <p id="status"></p>
 
-        <p id="status"></p>
+    <textarea
+        id="ocrResult"
+        placeholder="Kết quả OCR..."
+        rows="10"
+    ></textarea>
 
-        <textarea
-            id="ocrResult"
-            placeholder="Kết quả OCR sẽ xuất hiện ở đây..."
-            rows="10"
-        ></textarea>
+</main>
 
-    </main>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
-    <!-- Tesseract OCR -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-
-    <script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 
 </body>
 </html>
