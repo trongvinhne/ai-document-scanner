@@ -2,33 +2,23 @@ const imageInput = document.getElementById("imageInput");
 const imageArea = document.getElementById("imageArea");
 const sourceImage = document.getElementById("sourceImage");
 const selectionBox = document.getElementById("selectionBox");
-
-const selectionInfo =
-    document.getElementById("selectionInfo");
-
-const ocrButton =
-    document.getElementById("ocrButton");
-
-const status =
-    document.getElementById("status");
-
-const ocrResult =
-    document.getElementById("ocrResult");
-
+const selectionInfo = document.getElementById("selectionInfo");
+const ocrButton = document.getElementById("ocrButton");
+const status = document.getElementById("status");
+const ocrResult = document.getElementById("ocrResult");
 
 let selectedFile = null;
-
-let startX = 0;
-let startY = 0;
-
-let selection = null;
+let imageDataURL = null;
 
 let selecting = false;
+let startX = 0;
+let startY = 0;
+let selection = null;
 
 
-// ========================================
+// ================================
 // CHỌN ẢNH
-// ========================================
+// ================================
 
 imageInput.addEventListener("change", function () {
 
@@ -40,34 +30,55 @@ imageInput.addEventListener("change", function () {
 
     selectedFile = file;
 
-    const url =
-        URL.createObjectURL(file);
+    status.textContent = "⏳ Đang tải ảnh...";
 
-    sourceImage.onload = function () {
+    const reader = new FileReader();
 
-        selection = null;
+    reader.onload = function (event) {
 
-        selectionBox.style.display = "none";
+        imageDataURL = event.target.result;
 
-        ocrButton.disabled = true;
+        sourceImage.onload = function () {
 
-        selectionInfo.textContent =
-            "👉 Kéo ngón tay quanh mã cần đọc.";
+            imageArea.style.display = "block";
 
-        status.textContent = "";
+            selection = null;
 
-        ocrResult.value = "";
+            selectionBox.style.display = "none";
 
-        imageArea.style.display = "block";
+            ocrButton.disabled = true;
+
+            selectionInfo.textContent =
+                "👉 Kéo ngón tay quanh mã cần đọc.";
+
+            status.textContent =
+                "✅ Ảnh đã sẵn sàng.";
+
+            ocrResult.value = "";
+        };
+
+        sourceImage.onerror = function () {
+
+            status.textContent =
+                "❌ Không thể hiển thị ảnh.";
+        };
+
+        sourceImage.src = imageDataURL;
     };
 
-    sourceImage.src = url;
+    reader.onerror = function () {
+
+        status.textContent =
+            "❌ Không thể đọc file ảnh.";
+    };
+
+    reader.readAsDataURL(file);
 });
 
 
-// ========================================
-// TỌA ĐỘ NGÓN TAY
-// ========================================
+// ================================
+// LẤY VỊ TRÍ NGÓN TAY
+// ================================
 
 function getTouchPosition(event) {
 
@@ -78,23 +89,21 @@ function getTouchPosition(event) {
         event.touches[0];
 
     return {
-
         x: touch.clientX - rect.left,
-
         y: touch.clientY - rect.top
     };
 }
 
 
-// ========================================
+// ================================
 // BẮT ĐẦU KHOANH
-// ========================================
+// ================================
 
 imageArea.addEventListener(
     "touchstart",
     function (event) {
 
-        if (!selectedFile) {
+        if (!selectedFile || !sourceImage.complete) {
             return;
         }
 
@@ -108,8 +117,14 @@ imageArea.addEventListener(
 
         selecting = true;
 
-        selectionBox.style.display =
-            "block";
+        selection = {
+            x: startX,
+            y: startY,
+            width: 0,
+            height: 0
+        };
+
+        selectionBox.style.display = "block";
 
         selectionBox.style.left =
             startX + "px";
@@ -117,19 +132,16 @@ imageArea.addEventListener(
         selectionBox.style.top =
             startY + "px";
 
-        selectionBox.style.width =
-            "0px";
-
-        selectionBox.style.height =
-            "0px";
+        selectionBox.style.width = "0px";
+        selectionBox.style.height = "0px";
     },
     { passive: false }
 );
 
 
-// ========================================
+// ================================
 // KÉO KHUNG
-// ========================================
+// ================================
 
 imageArea.addEventListener(
     "touchmove",
@@ -179,9 +191,9 @@ imageArea.addEventListener(
 );
 
 
-// ========================================
+// ================================
 // KẾT THÚC KHOANH
-// ========================================
+// ================================
 
 imageArea.addEventListener(
     "touchend",
@@ -195,18 +207,14 @@ imageArea.addEventListener(
 
         if (
             selection &&
-            selection.width > 15 &&
-            selection.height > 10
+            selection.width >= 20 &&
+            selection.height >= 10
         ) {
 
             ocrButton.disabled = false;
 
             selectionInfo.textContent =
-                `Đã chọn: ${
-                    Math.round(selection.width)
-                } × ${
-                    Math.round(selection.height)
-                } px`;
+                "✅ Đã chọn vùng — bấm Đọc vùng đã chọn.";
 
         } else {
 
@@ -215,151 +223,103 @@ imageArea.addEventListener(
             ocrButton.disabled = true;
 
             selectionInfo.textContent =
-                "Vùng quá nhỏ. Hãy khoanh lại.";
+                "⚠️ Vùng quá nhỏ. Hãy khoanh lại.";
         }
     }
 );
 
 
-// ========================================
-// TẠO ẢNH CẮT
-// ========================================
+// ================================
+// TẠO VÙNG CẮT
+// ================================
 
 function createCropCanvas() {
 
-    const imageRect =
+    const rect =
         sourceImage.getBoundingClientRect();
 
-    const naturalWidth =
-        sourceImage.naturalWidth;
+    const scaleX =
+        sourceImage.naturalWidth / rect.width;
 
-    const naturalHeight =
-        sourceImage.naturalHeight;
-
-    const displayWidth =
-        imageRect.width;
-
-    const scale =
-        naturalWidth / displayWidth;
+    const scaleY =
+        sourceImage.naturalHeight / rect.height;
 
     const sourceX =
-        selection.x * scale;
+        selection.x * scaleX;
 
     const sourceY =
-        selection.y * scale;
+        selection.y * scaleY;
 
     const sourceWidth =
-        selection.width * scale;
+        selection.width * scaleX;
 
     const sourceHeight =
-        selection.height * scale;
+        selection.height * scaleY;
 
-
-    // Phóng to 3 lần
-    const enlarge = 3;
+    const enlarge = 4;
 
     const canvas =
         document.createElement("canvas");
 
     canvas.width =
-        Math.max(
-            1,
-            Math.round(sourceWidth * enlarge)
-        );
+        Math.round(sourceWidth * enlarge);
 
     canvas.height =
-        Math.max(
-            1,
-            Math.round(sourceHeight * enlarge)
-        );
+        Math.round(sourceHeight * enlarge);
 
     const ctx =
         canvas.getContext("2d");
 
+    ctx.imageSmoothingEnabled = true;
 
     ctx.drawImage(
-
         sourceImage,
-
         sourceX,
         sourceY,
         sourceWidth,
         sourceHeight,
-
         0,
         0,
         canvas.width,
         canvas.height
     );
 
-
     return canvas;
 }
 
 
-// ========================================
-// LÀM SẠCH KẾT QUẢ MÃ
-// ========================================
-
-function cleanCode(text) {
-
-    let value =
-        text
-        .toUpperCase()
-        .replace(/\s+/g, "")
-        .replace(/[^A-Z0-9]/g, "");
-
-
-    // Một số lỗi OCR phổ biến
-    value =
-        value
-        .replace(/^VTPI/, "VTPI")
-        .replace(/^VTPI/, "VTP1");
-
-
-    return value;
-}
-
-
-// ========================================
+// ================================
 // OCR
-// ========================================
+// ================================
 
 ocrButton.addEventListener(
     "click",
     async function () {
 
-        if (!selection || !selectedFile) {
+        if (!selection) {
             return;
         }
 
         ocrButton.disabled = true;
 
         status.textContent =
-            "⏳ Đang chuẩn bị vùng OCR...";
+            "⏳ Đang chuẩn bị OCR...";
 
         ocrResult.value = "";
-
 
         try {
 
             const cropCanvas =
                 createCropCanvas();
 
-
             status.textContent =
-                "🔍 Đang OCR...";
-
+                "🔍 Đang đọc vùng đã chọn...";
 
             const result =
                 await Tesseract.recognize(
-
                     cropCanvas,
-
                     "eng",
-
                     {
-
                         logger: function (message) {
 
                             if (
@@ -369,8 +329,7 @@ ocrButton.addEventListener(
 
                                 const percent =
                                     Math.round(
-                                        message.progress *
-                                        100
+                                        message.progress * 100
                                     );
 
                                 status.textContent =
@@ -382,26 +341,16 @@ ocrButton.addEventListener(
                     }
                 );
 
-
-            const rawText =
+            const text =
                 result.data.text.trim();
 
-
-            const cleaned =
-                cleanCode(rawText);
-
-
             ocrResult.value =
-                `Kết quả OCR:\n${rawText}\n\n` +
-                `Mã đã làm sạch:\n${cleaned}`;
-
+                text || "Không nhận dạng được.";
 
             status.textContent =
                 "✅ OCR hoàn tất.";
 
-        }
-
-        catch (error) {
+        } catch (error) {
 
             console.error(error);
 
@@ -409,7 +358,6 @@ ocrButton.addEventListener(
                 "❌ OCR lỗi: " +
                 error.message;
         }
-
 
         ocrButton.disabled = false;
     }
