@@ -1,30 +1,102 @@
+* {
+    box-sizing: border-box;
+}
+
 body {
-    font-family: Arial, sans-serif;
-    background: #f5f5f5;
     margin: 0;
+    padding: 20px 10px;
+    background: #f2f2f2;
+    font-family: Arial, sans-serif;
 }
 
 .container {
-    max-width: 600px;
-    margin: 40px auto;
-    padding: 20px;
+    width: 100%;
+    max-width: 700px;
+    margin: 0 auto;
     background: white;
-    border-radius: 15px;
+    padding: 20px;
+    border-radius: 18px;
 }
 
 h1 {
     text-align: center;
+    margin-top: 5px;
 }
 
-#preview img {
+.instruction {
+    text-align: center;
+    font-size: 18px;
+    line-height: 1.5;
+}
+
+input[type="file"] {
+    display: block;
     width: 100%;
-    margin-top: 20px;
-    border-radius: 10px;
+    margin: 20px 0;
 }
 
-#info {
-    margin-top: 15px;
-    padding: 10px;
-    background: #eee;
-    border-radius: 8px;
+#imageArea {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #ddd;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#sourceImage {
+    display: block;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+#selectionBox {
+    position: absolute;
+    display: none;
+    border: 3px solid red;
+    background: rgba(255, 0, 0, 0.12);
+    pointer-events: none;
+}
+
+#selectionInfo {
+    text-align: center;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: bold;
+    background: #1677ff;
+    color: white;
+}
+
+button:disabled {
+    background: #ccc;
+    color: #888;
+}
+
+#status {
+    text-align: center;
+    min-height: 25px;
+    font-weight: bold;
+}
+
+#ocrResult {
+    width: 100%;
+    resize: vertical;
+    font-size: 18px;
+    line-height: 1.5;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
 }
