@@ -2,11 +2,12 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
 
-    <title>AI Document Scanner V3</title>
+    <title>AI Document Scanner V3.1</title>
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=31">
 </head>
 
 <body>
@@ -15,7 +16,9 @@
 
     <h1>AI Document Scanner</h1>
 
-    <p>Chọn ảnh rồi kéo để khoanh vùng cần đọc.</p>
+    <p class="instruction">
+        Chọn ảnh rồi dùng ngón tay khoanh vùng mã cần đọc.
+    </p>
 
     <input
         type="file"
@@ -23,9 +26,15 @@
         accept="image/*"
     >
 
-    <div id="canvasContainer">
-        <canvas id="imageCanvas"></canvas>
+    <div id="imageArea">
+        <img id="sourceImage" alt="Ảnh đã chọn">
+
+        <div id="selectionBox"></div>
     </div>
+
+    <p id="selectionInfo">
+        Chưa chọn vùng.
+    </p>
 
     <button id="ocrButton" disabled>
         🔍 Đọc vùng đã chọn
@@ -35,15 +44,16 @@
 
     <textarea
         id="ocrResult"
-        placeholder="Kết quả OCR..."
-        rows="10"
+        rows="8"
+        placeholder="Kết quả OCR sẽ xuất hiện ở đây..."
+        readonly
     ></textarea>
 
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
-<script src="app.js?v=3"></script>
+<script src="app.js?v=31"></script>
 
 </body>
 </html>
