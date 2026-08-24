@@ -1,12 +1,23 @@
 const imageInput = document.getElementById("imageInput");
-const preview = document.getElementById("preview");
-const info = document.getElementById("info");
+const canvas = document.getElementById("imageCanvas");
+const container = document.getElementById("canvasContainer");
 
 const ocrButton = document.getElementById("ocrButton");
 const status = document.getElementById("status");
 const ocrResult = document.getElementById("ocrResult");
 
-let selectedFile = null;
+const ctx = canvas.getContext("2d");
+
+let image = new Image();
+
+let scale = 1;
+
+let selecting = false;
+
+let startX = 0;
+let startY = 0;
+
+let selection = null;
 
 
 // ===============================
@@ -15,240 +26,315 @@ let selectedFile = null;
 
 imageInput.addEventListener("change", function () {
 
-    selectedFile = imageInput.files[0];
+    const file = imageInput.files[0];
 
-    if (!selectedFile) {
+    if (!file) {
         return;
     }
 
-    const imageURL = URL.createObjectURL(selectedFile);
+    const url = URL.createObjectURL(file);
 
-    preview.innerHTML = `
-        <img src="${imageURL}" alt="Ảnh đã chọn">
-    `;
+    image.onload = function () {
 
-    info.innerHTML = `
-        <p><strong>Tên file:</strong> ${selectedFile.name}</p>
-        <p><strong>Kích thước:</strong> ${selectedFile.size} bytes</p>
-        <p><strong>Loại file:</strong> ${selectedFile.type}</p>
-    `;
+        drawImage();
 
-    ocrButton.disabled = false;
+        ocrButton.disabled = true;
 
-    status.textContent = "Ảnh đã sẵn sàng.";
+        status.textContent =
+            "👉 Kéo ngón tay quanh vùng mã cần đọc.";
 
-    ocrResult.value = "";
+        ocrResult.value = "";
+
+    };
+
+    image.src = url;
 });
 
 
 // ===============================
-// TIỀN XỬ LÝ ẢNH
+// HIỂN THỊ ẢNH
 // ===============================
 
-function preprocessImage(file) {
+function drawImage() {
 
-    return new Promise((resolve, reject) => {
+    const maxWidth = Math.min(
+        window.innerWidth - 30,
+        700
+    );
 
-        const image = new Image();
+    scale = maxWidth / image.width;
 
-        image.onload = function () {
+    canvas.width = maxWidth;
 
-            const scale = 2;
+    canvas.height =
+        image.height * scale;
 
-            const canvas = document.createElement("canvas");
+    ctx.drawImage(
+        image,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
 
-            canvas.width = image.width * scale;
-            canvas.height = image.height * scale;
+    if (selection) {
 
-            const ctx = canvas.getContext("2d");
+        ctx.strokeStyle = "red";
+        ctx.lineWidth = 3;
 
-            ctx.drawImage(
-                image,
-                0,
-                0,
-                canvas.width,
-                canvas.height
-            );
+        ctx.strokeRect(
+            selection.x,
+            selection.y,
+            selection.width,
+            selection.height
+        );
+    }
+}
 
-            const imageData = ctx.getImageData(
-                0,
-                0,
-                canvas.width,
-                canvas.height
-            );
 
-            const data = imageData.data;
+// ===============================
+// LẤY TỌA ĐỘ NGÓN TAY
+// ===============================
 
-            // Chuyển sang grayscale
-            for (let i = 0; i < data.length; i += 4) {
+function getPosition(event) {
 
-                const r = data[i];
-                const g = data[i + 1];
-                const b = data[i + 2];
+    const rect =
+        canvas.getBoundingClientRect();
 
-                const gray =
-                    0.299 * r +
-                    0.587 * g +
-                    0.114 * b;
+    const touch =
+        event.touches[0];
 
-                data[i] = gray;
-                data[i + 1] = gray;
-                data[i + 2] = gray;
-            }
+    return {
 
-            ctx.putImageData(imageData, 0, 0);
+        x: touch.clientX - rect.left,
 
-            canvas.toBlob(
-                blob => {
+        y: touch.clientY - rect.top
+    };
+}
 
-                    if (blob) {
-                        resolve(blob);
-                    } else {
-                        reject(
-                            new Error("Không tạo được ảnh xử lý")
-                        );
-                    }
 
-                },
-                "image/png"
-            );
+// ===============================
+// BẮT ĐẦU KHOANH VÙNG
+// ===============================
+
+canvas.addEventListener(
+    "touchstart",
+    function (event) {
+
+        event.preventDefault();
+
+        const pos =
+            getPosition(event);
+
+        startX = pos.x;
+
+        startY = pos.y;
+
+        selecting = true;
+
+        selection = null;
+
+    },
+    { passive: false }
+);
+
+
+// ===============================
+// KÉO KHUNG
+// ===============================
+
+canvas.addEventListener(
+    "touchmove",
+    function (event) {
+
+        if (!selecting) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const pos =
+            getPosition(event);
+
+        const x =
+            Math.min(startX, pos.x);
+
+        const y =
+            Math.min(startY, pos.y);
+
+        const width =
+            Math.abs(pos.x - startX);
+
+        const height =
+            Math.abs(pos.y - startY);
+
+        selection = {
+            x,
+            y,
+            width,
+            height
         };
 
-        image.onerror = reject;
+        drawImage();
 
-        image.src = URL.createObjectURL(file);
-    });
-}
+    },
+    { passive: false }
+);
 
 
 // ===============================
-// LỌC MÃ
+// KẾT THÚC KHOANH VÙNG
 // ===============================
 
-function extractCodes(text) {
+canvas.addEventListener(
+    "touchend",
+    function () {
 
-    const normalized = text
-        .toUpperCase()
-        .replace(/[^A-Z0-9\s]/g, " ");
+        selecting = false;
 
-    const words = normalized.split(/\s+/);
-
-    const candidates = [];
-
-    for (const word of words) {
-
-        // Mã có cả chữ và số
-        const hasLetter = /[A-Z]/.test(word);
-        const hasNumber = /[0-9]/.test(word);
-
-        // Độ dài tối thiểu
         if (
-            word.length >= 8 &&
-            word.length <= 30 &&
-            hasLetter &&
-            hasNumber
+            selection &&
+            selection.width > 10 &&
+            selection.height > 10
         ) {
 
-            candidates.push(word);
+            ocrButton.disabled = false;
+
+            status.textContent =
+                "✅ Đã chọn vùng. Bấm Đọc vùng đã chọn.";
         }
-    }
 
-    return [...new Set(candidates)];
-}
+    }
+);
 
 
 // ===============================
-// OCR
+// OCR VÙNG ĐÃ CHỌN
 // ===============================
 
-ocrButton.addEventListener("click", async function () {
+ocrButton.addEventListener(
+    "click",
+    async function () {
 
-    if (!selectedFile) {
-        return;
-    }
+        if (!selection) {
+            return;
+        }
 
-    ocrButton.disabled = true;
-
-    status.textContent =
-        "⏳ Đang xử lý ảnh...";
-
-    ocrResult.value = "";
-
-    try {
-
-        const processedImage =
-            await preprocessImage(selectedFile);
+        ocrButton.disabled = true;
 
         status.textContent =
-            "🔍 Đang chạy OCR...";
+            "⏳ Đang cắt vùng ảnh...";
 
-        const result = await Tesseract.recognize(
-            processedImage,
-            "eng",
-            {
+        try {
 
-                logger: function (message) {
+            // Tọa độ trên ảnh gốc
+            const sourceX =
+                selection.x / scale;
 
-                    if (
-                        message.status ===
-                        "recognizing text"
-                    ) {
+            const sourceY =
+                selection.y / scale;
 
-                        const percent =
-                            Math.round(
-                                message.progress * 100
-                            );
+            const sourceWidth =
+                selection.width / scale;
 
-                        status.textContent =
-                            `🔍 OCR: ${percent}%`;
+            const sourceHeight =
+                selection.height / scale;
+
+
+            // Canvas riêng cho vùng OCR
+            const cropCanvas =
+                document.createElement("canvas");
+
+            const enlarge = 3;
+
+            cropCanvas.width =
+                sourceWidth * enlarge;
+
+            cropCanvas.height =
+                sourceHeight * enlarge;
+
+            const cropCtx =
+                cropCanvas.getContext("2d");
+
+
+            cropCtx.drawImage(
+
+                image,
+
+                sourceX,
+                sourceY,
+                sourceWidth,
+                sourceHeight,
+
+                0,
+                0,
+                cropCanvas.width,
+                cropCanvas.height
+
+            );
+
+
+            status.textContent =
+                "🔍 Đang OCR vùng đã chọn...";
+
+
+            const result =
+                await Tesseract.recognize(
+
+                    cropCanvas,
+
+                    "eng",
+
+                    {
+
+                        logger: function (message) {
+
+                            if (
+                                message.status ===
+                                "recognizing text"
+                            ) {
+
+                                const percent =
+                                    Math.round(
+                                        message.progress *
+                                        100
+                                    );
+
+                                status.textContent =
+                                    `🔍 OCR: ${percent}%`;
+                            }
+                        },
+
+                        tessedit_pageseg_mode: "7"
+
                     }
-                },
+                );
 
-                tessedit_pageseg_mode: "6"
-            }
-        );
 
-        const rawText =
-            result.data.text;
+            const text =
+                result.data.text.trim();
 
-        const codes =
-            extractCodes(rawText);
 
-        let output = "";
+            ocrResult.value =
+                text || "Không nhận dạng được.";
 
-        output += "=== VĂN BẢN OCR ===\n\n";
-        output += rawText.trim();
 
-        output += "\n\n====================\n\n";
+            status.textContent =
+                "✅ OCR hoàn tất.";
 
-        output += "=== MÃ CÓ KHẢ NĂNG ===\n\n";
-
-        if (codes.length === 0) {
-
-            output +=
-                "Chưa phát hiện mã phù hợp.";
-
-        } else {
-
-            codes.forEach((code, index) => {
-
-                output +=
-                    `${index + 1}. ${code}\n`;
-            });
         }
 
-        ocrResult.value = output;
+        catch (error) {
 
-        status.textContent =
-            `✅ Hoàn tất — tìm thấy ${codes.length} mã`;
+            console.error(error);
 
-    } catch (error) {
+            status.textContent =
+                "❌ OCR lỗi: " +
+                error.message;
 
-        console.error(error);
+        }
 
-        status.textContent =
-            "❌ OCR bị lỗi: " + error.message;
+        ocrButton.disabled = false;
+
     }
-
-    ocrButton.disabled = false;
-});
+);
